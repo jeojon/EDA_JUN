@@ -48,35 +48,23 @@ Canvas::Canvas(wxWindow* parent)
     Bind(wxEVT_KEY_DOWN, &Canvas::OnKeyDown, this);
     Bind(wxEVT_MIDDLE_DOWN, &Canvas::OnMiddleDown, this);
     Bind(wxEVT_MIDDLE_UP, &Canvas::OnMiddleUp, this);
-<<<<<<< HEAD
-    Bind(wxEVT_MOUSE_CAPTURE_LOST, &Canvas::OnCaptureLost, this);
-=======
->>>>>>> faaed4b (wan_first)
     Bind(wxEVT_ERASE_BACKGROUND, [](wxEraseEvent&) {});
 }
 
 wxString Canvas::StatusText() const {
     if (m_mode == Mode::Place) {
         const ComponentSpec* spec = ShapeLibrary::Get().Find(m_placeType);
-<<<<<<< HEAD
-        return wxString::Format("正在放置 %s，点击画布放置，Esc 取消",
-=======
         return wxString::Format(L"正在放置 %s，点击画布放置，Esc 取消",
->>>>>>> faaed4b (wan_first)
                                 spec ? spec->displayName : L"元件");
     }
     if (m_mode == Mode::Wire) {
         return m_wireStartComponent ? L"请点击第二个引脚完成连线，Esc 取消"
-                                    : L"请点击第一个引脚开始连线";
+                                    : L"请点击第一个引脚开始连�?";
     }
     if (m_model.SelectedCount() > 0) {
-<<<<<<< HEAD
-        return wxString::Format("已选中 %d 个对象", m_model.SelectedCount());
-=======
-        return wxString::Format(L"已选中 %d 个对象", m_model.SelectedCount());
->>>>>>> faaed4b (wan_first)
+        return wxString::Format(L"已选中 %d 个对�?", m_model.SelectedCount());
     }
-    return L"选择左侧元件后点击画布放置；拖动引脚可连线";
+    return L"选择左侧元件后点击画布放置；拖动引脚可连�?";
 }
 
 void Canvas::StartPlace(ComponentType type) {
@@ -112,20 +100,6 @@ void Canvas::DeleteSelected() {
     SetDirty();
 }
 
-<<<<<<< HEAD
-void Canvas::SetSelectedLabel(const wxString& label) {
-    bool changed = false;
-    for (int id : m_model.Selection()) {
-        if (Component* c = m_model.Find(id)) {
-            c->label = label;
-            changed = true;
-        }
-    }
-    if (changed) SetDirty();
-}
-
-=======
->>>>>>> faaed4b (wan_first)
 void Canvas::SelectAll() {
     m_model.ClearSelection();
     for (const auto& c : m_model.Components()) {
@@ -544,14 +518,6 @@ void Canvas::OnMiddleUp(wxMouseEvent&) {
     if (HasCapture()) ReleaseMouse();
 }
 
-<<<<<<< HEAD
-void Canvas::OnCaptureLost(wxMouseCaptureLostEvent&) {
-    m_middlePanning = false;
-    m_dragging = false;
-}
-
-=======
->>>>>>> faaed4b (wan_first)
 void Canvas::SetDirty(bool dirty) {
     m_dirty = dirty;
     RefreshAndNotify();

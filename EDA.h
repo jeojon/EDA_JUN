@@ -143,10 +143,6 @@ public:
     void CancelMode();
     void RotateSelected();
     void DeleteSelected();
-<<<<<<< HEAD
-    void SetSelectedLabel(const wxString& label);
-=======
->>>>>>> faaed4b (wan_first)
     void SelectAll();
     void ZoomIn();
     void ZoomOut();
@@ -179,10 +175,6 @@ private:
     void OnKeyDown(wxKeyEvent& event);
     void OnMiddleDown(wxMouseEvent& event);
     void OnMiddleUp(wxMouseEvent& event);
-<<<<<<< HEAD
-    void OnCaptureLost(wxMouseCaptureLostEvent& event);
-=======
->>>>>>> faaed4b (wan_first)
 
     wxPoint ScreenToWorld(const wxPoint& screen) const;
     wxPoint Snap(const wxPoint& world) const;
@@ -247,10 +239,6 @@ private:
 
     Canvas* m_canvas = nullptr;
     wxListBox* m_palette = nullptr;
-<<<<<<< HEAD
-    wxTextCtrl* m_labelEdit = nullptr;
-=======
->>>>>>> faaed4b (wan_first)
 };
 
 } // namespace eda

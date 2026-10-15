@@ -27,7 +27,7 @@ MainFrame::MainFrame(wxWindow* parent)
     m_canvas = new Canvas(this);
 
     wxPanel* sidebar = new wxPanel(this);
-    auto* title = new wxStaticText(sidebar, wxID_ANY, L"元件库");
+    auto* title = new wxStaticText(sidebar, wxID_ANY, L"元件�?");
     m_palette = new wxListBox(sidebar, wxID_ANY, wxDefaultPosition,
                               wxSize(150, -1));
     m_palette->Append(L"选择 / 移动");
@@ -39,15 +39,6 @@ MainFrame::MainFrame(wxWindow* parent)
     auto* sidebarSizer = new wxBoxSizer(wxVERTICAL);
     sidebarSizer->Add(title, 0, wxALL, 8);
     sidebarSizer->Add(m_palette, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
-<<<<<<< HEAD
-    sidebarSizer->Add(new wxStaticText(sidebar, wxID_ANY, L"元件名称"), 0,
-                      wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    m_labelEdit = new wxTextCtrl(sidebar, wxID_ANY, wxEmptyString,
-                                 wxDefaultPosition, wxDefaultSize,
-                                 wxTE_PROCESS_ENTER);
-    sidebarSizer->Add(m_labelEdit, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
-=======
->>>>>>> faaed4b (wan_first)
     sidebar->SetSizer(sidebarSizer);
 
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -59,9 +50,9 @@ MainFrame::MainFrame(wxWindow* parent)
     fileMenu->Append(wxID_NEW, L"新建(&N)\tCtrl+N");
     fileMenu->Append(wxID_OPEN, L"打开(&O)...\tCtrl+O");
     fileMenu->Append(ID_SAVE, L"保存(&S)\tCtrl+S");
-    fileMenu->Append(ID_SAVE_AS, L"另存为(&A)...");
+    fileMenu->Append(ID_SAVE_AS, L"另存�?(&A)...");
     fileMenu->AppendSeparator();
-    fileMenu->Append(wxID_EXIT, L"退出(&Q)");
+    fileMenu->Append(wxID_EXIT, L"退�?(&Q)");
 
     auto* editMenu = new wxMenu;
     editMenu->Append(ID_DELETE, L"删除选中\tDel");
@@ -103,10 +94,6 @@ MainFrame::MainFrame(wxWindow* parent)
     Bind(wxEVT_MENU, &MainFrame::OnToggleGrid, this, ID_GRID);
     Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_LISTBOX, &MainFrame::OnPalette, this, m_palette->GetId());
-<<<<<<< HEAD
-    Bind(wxEVT_TEXT, &MainFrame::OnLabelChanged, this, m_labelEdit->GetId());
-=======
->>>>>>> faaed4b (wan_first)
     Bind(wxEVT_TEXT, &MainFrame::OnCanvasChanged, this, kCanvasChangedId);
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
 
@@ -127,14 +114,14 @@ void MainFrame::OnNew(wxCommandEvent&) {
 }
 
 void MainFrame::OnOpen(wxCommandEvent&) {
-    wxFileDialog dialog(this, L"打开原理图", wxEmptyString, wxEmptyString,
-                        L"EDA 文件 (*.eda)|*.eda|所有文件 (*.*)|*.*",
+    wxFileDialog dialog(this, L"打开原理�?", wxEmptyString, wxEmptyString,
+                        L"EDA 文件 (*.eda)|*.eda|所有文�? (*.*)|*.*",
                         wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (dialog.ShowModal() != wxID_OK) return;
 
     wxString error;
     if (!m_canvas->OpenFile(dialog.GetPath(), &error)) {
-        wxMessageBox(L"打开失败：" + error, L"错误", wxOK | wxICON_ERROR, this);
+        wxMessageBox(L"打开失败�?" + error, L"错误", wxOK | wxICON_ERROR, this);
         return;
     }
     m_palette->SetSelection(0);
@@ -151,8 +138,8 @@ void MainFrame::OnSave(wxCommandEvent&) {
 }
 
 void MainFrame::OnSaveAs(wxCommandEvent&) {
-    wxFileDialog dialog(this, L"保存原理图", wxEmptyString, L"未命名.eda",
-                        L"EDA 文件 (*.eda)|*.eda|所有文件 (*.*)|*.*",
+    wxFileDialog dialog(this, L"保存原理�?", wxEmptyString, L"未命�?.eda",
+                        L"EDA 文件 (*.eda)|*.eda|所有文�? (*.*)|*.*",
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (dialog.ShowModal() != wxID_OK) return;
 
@@ -164,7 +151,7 @@ void MainFrame::OnSaveAs(wxCommandEvent&) {
 bool MainFrame::SaveTo(const wxString& path) {
     wxString error;
     if (!m_canvas->SaveFile(path, &error)) {
-        wxMessageBox(L"保存失败：" + error, L"错误", wxOK | wxICON_ERROR, this);
+        wxMessageBox(L"保存失败�?" + error, L"错误", wxOK | wxICON_ERROR, this);
         return false;
     }
     SyncUi();
@@ -210,7 +197,7 @@ void MainFrame::OnToggleGrid(wxCommandEvent& event) {
 
 void MainFrame::OnAbout(wxCommandEvent&) {
     wxMessageBox(L"电路原理图编辑器\n"
-                 L"支持放置逻辑门、拖动元件、连接导线、保存和打开 .eda 文件。",
+                 L"支持放置逻辑门、拖动元件、连接导线、保存和打开 .eda 文件�?",
                  L"关于", wxOK | wxICON_INFORMATION, this);
 }
 
@@ -223,13 +210,6 @@ void MainFrame::OnPalette(wxCommandEvent& event) {
     m_canvas->StartPlace(static_cast<ComponentType>(index - 1));
 }
 
-<<<<<<< HEAD
-void MainFrame::OnLabelChanged(wxCommandEvent& event) {
-    m_canvas->SetSelectedLabel(event.GetString());
-}
-
-=======
->>>>>>> faaed4b (wan_first)
 void MainFrame::OnCanvasChanged(wxCommandEvent&) {
     SyncUi();
 }
@@ -263,31 +243,16 @@ void MainFrame::OnClose(wxCloseEvent& event) {
 
 void MainFrame::SyncUi() {
     wxString title = m_canvas->FilePath().IsEmpty()
-                         ? wxString(L"未命名")
+                         ? wxString(L"未命�?")
                          : wxFileName(m_canvas->FilePath()).GetFullName();
     if (m_canvas->IsDirty()) title = L"*" + title;
     SetTitle(title + L" - 电路原理图编辑器");
 
     SetStatusText(m_canvas->StatusText(), 0);
-<<<<<<< HEAD
-    SetStatusText(wxString::Format("元件 %d   导线 %d",
-                                   static_cast<int>(m_canvas->Model().Components().size()),
-                                   static_cast<int>(m_canvas->Model().Wires().size())),
-                  1);
-
-    const auto& selection = m_canvas->Model().Selection();
-    const Component* selected =
-        selection.size() == 1 ? m_canvas->Model().Find(selection.front()) : nullptr;
-    m_labelEdit->Enable(selected != nullptr);
-    if (selected && !m_labelEdit->HasFocus()) {
-        m_labelEdit->ChangeValue(selected->label);
-    }
-=======
     SetStatusText(wxString::Format(L"元件 %d   导线 %d",
                                    static_cast<int>(m_canvas->Model().Components().size()),
                                    static_cast<int>(m_canvas->Model().Wires().size())),
                   1);
->>>>>>> faaed4b (wan_first)
 }
 
 } // namespace eda

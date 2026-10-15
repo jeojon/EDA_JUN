@@ -125,6 +125,8 @@ void Schematic::SelectWire(int id) {
     m_selectedWire = id;
 }
 
+
+// ���ĳ�ԭ��ѡ�����ѡ�񻥳�
 bool Schematic::IsSelected(int id) const {
     return id == m_selectedWire ||
            std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) !=
@@ -263,11 +265,7 @@ bool Schematic::Deserialize(const wxString& text, wxString* error) {
     *this = std::move(result);
 
     if (error && badLines > 0) {
-<<<<<<< HEAD
-        *error = wxString::Format("有 %d 行无法识别，已跳过。", badLines);
-=======
-        *error = wxString::Format(L"有 %d 行无法识别，已跳过。", badLines);
->>>>>>> faaed4b (wan_first)
+        *error = wxString::Format(L"�? %d 行无法识别，已跳过�?", badLines);
     }
     return true;
 }

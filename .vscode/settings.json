@@ -1,12 +1,12 @@
 {
     "[c]": {
-        "files.encoding": "gbk"
+        "files.encoding": "utf8"
     },
     "[cpp]": {
-        "files.encoding": "gbk"
+        "files.encoding": "utf8"
     },
-    "files.encoding": "gbk",
-    "terminal.integrated.encoding": "gbk",
+    "files.encoding": "utf8",
+    "terminal.integrated.encoding": "utf8",
     "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.profiles.windows": {
         "PowerShell": {

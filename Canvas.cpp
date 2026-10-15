@@ -7,6 +7,7 @@
 #include <wx/file.h>
 #include <wx/graphics.h>
 #include <wx/menu.h>
+#include <wx/strconv.h>
 
 namespace eda {
 
@@ -55,7 +56,7 @@ Canvas::Canvas(wxWindow* parent)
 wxString Canvas::StatusText() const {
     if (m_mode == Mode::Place) {
         const ComponentSpec* spec = ShapeLibrary::Get().Find(m_placeType);
-        return wxString::Format("正在放置 %s，点击画布放置，Esc 取消",
+        return wxString::Format(L"正在放置 %s，点击画布放置，Esc 取消",
                                 spec ? spec->displayName : L"元件");
     }
     if (m_mode == Mode::Wire) {
@@ -63,7 +64,7 @@ wxString Canvas::StatusText() const {
                                     : L"请点击第一个引脚开始连线";
     }
     if (m_model.SelectedCount() > 0) {
-        return wxString::Format("已选中 %d 个对象", m_model.SelectedCount());
+        return wxString::Format(L"已选中 %d 个对象", m_model.SelectedCount());
     }
     return L"选择左侧元件后点击画布放置；拖动引脚可连线";
 }
@@ -191,7 +192,23 @@ bool Canvas::OpenFile(const wxString& path, wxString* error) {
             if (error) *error = L"读取文件失败";
             return false;
         }
-        text = wxString::FromUTF8(buffer.data(), static_cast<size_t>(count));
+
+        size_t offset = 0;
+        if (count >= 3 &&
+            static_cast<unsigned char>(buffer[0]) == 0xEF &&
+            static_cast<unsigned char>(buffer[1]) == 0xBB &&
+            static_cast<unsigned char>(buffer[2]) == 0xBF) {
+            offset = 3;
+        }
+
+        text = wxString::FromUTF8(buffer.data() + offset,
+                                  static_cast<size_t>(count) - offset);
+        if (text.IsEmpty() && static_cast<size_t>(count) > offset) {
+            wxCSConv localEncoding(wxFONTENCODING_SYSTEM);
+            text = wxString(buffer.data() + offset,
+                            localEncoding,
+                            static_cast<size_t>(count) - offset);
+        }
     }
 
     m_model.Deserialize(text, error);
@@ -210,7 +227,9 @@ bool Canvas::SaveFile(const wxString& path, wxString* error) {
     }
 
     const wxScopedCharBuffer data = m_model.Serialize().utf8_str();
-    if (file.Write(data.data(), data.length()) != data.length()) {
+    const unsigned char bom[] = { 0xEF, 0xBB, 0xBF };
+    if (file.Write(bom, sizeof(bom)) != sizeof(bom) ||
+        file.Write(data.data(), data.length()) != data.length()) {
         if (error) *error = L"写入文件失败";
         return false;
     }

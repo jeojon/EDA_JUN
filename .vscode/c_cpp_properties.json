@@ -4,6 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
+                "D:\\wxWeigets\\wxWidgets-3.3.3\\include",
+                "D:\\wxWeigets\\wxWidgets-3.3.3\\lib\\vc_x64_lib\\mswud",
                 "E:\\VS\\VC\\Tools\\MSVC\\14.51.36231\\include",
                 "E:\\VS\\VC\\Tools\\MSVC\\14.51.36231\\ATLMFC\\include",
                 "E:\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt",
@@ -17,7 +19,7 @@
             ],
             "compilerPath": "E:\\VS\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
             "cStandard": "c17",
-            "cppStandard": "gnu++14",
+            "cppStandard": "c++17",
             "intelliSenseMode": "msvc-x64"
         }
     ],

@@ -122,7 +122,7 @@ void MainFrame::OnNew(wxCommandEvent&) {
 
 void MainFrame::OnOpen(wxCommandEvent&) {
     wxFileDialog dialog(this, L"打开原理图", wxEmptyString, wxEmptyString,
-                        L"EDA 文件 (*.eda)|*.eda|所有文件 (*.*)|*.*",
+                        L"文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*",
                         wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (dialog.ShowModal() != wxID_OK) return;
 
@@ -145,14 +145,12 @@ void MainFrame::OnSave(wxCommandEvent&) {
 }
 
 void MainFrame::OnSaveAs(wxCommandEvent&) {
-    wxFileDialog dialog(this, L"保存原理图", wxEmptyString, L"未命名.eda",
-                        L"EDA 文件 (*.eda)|*.eda|所有文件 (*.*)|*.*",
+    wxFileDialog dialog(this, L"保存原理图", wxEmptyString, L"未命名.txt",
+                        L"文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*",
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (dialog.ShowModal() != wxID_OK) return;
 
-    wxString path = dialog.GetPath();
-    if (!path.Lower().EndsWith(L".eda")) path += L".eda";
-    SaveTo(path);
+    SaveTo(dialog.GetPath());
 }
 
 bool MainFrame::SaveTo(const wxString& path) {
@@ -204,7 +202,7 @@ void MainFrame::OnToggleGrid(wxCommandEvent& event) {
 
 void MainFrame::OnAbout(wxCommandEvent&) {
     wxMessageBox(L"电路原理图编辑器\n"
-                 L"支持放置逻辑门、拖动元件、连接导线、保存和打开 .eda 文件。",
+                 L"支持放置逻辑门、拖动元件、连接导线、保存和打开 .txt 文件。",
                  L"关于", wxOK | wxICON_INFORMATION, this);
 }
 
@@ -260,7 +258,7 @@ void MainFrame::SyncUi() {
     SetTitle(title + L" - 电路原理图编辑器");
 
     SetStatusText(m_canvas->StatusText(), 0);
-    SetStatusText(wxString::Format("元件 %d   导线 %d",
+    SetStatusText(wxString::Format(L"元件 %d   导线 %d",
                                    static_cast<int>(m_canvas->Model().Components().size()),
                                    static_cast<int>(m_canvas->Model().Wires().size())),
                   1);

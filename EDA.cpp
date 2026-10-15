@@ -263,7 +263,11 @@ bool Schematic::Deserialize(const wxString& text, wxString* error) {
     *this = std::move(result);
 
     if (error && badLines > 0) {
+<<<<<<< HEAD
         *error = wxString::Format("有 %d 行无法识别，已跳过。", badLines);
+=======
+        *error = wxString::Format(L"有 %d 行无法识别，已跳过。", badLines);
+>>>>>>> faaed4b (wan_first)
     }
     return true;
 }

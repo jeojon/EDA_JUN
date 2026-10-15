@@ -39,12 +39,15 @@ MainFrame::MainFrame(wxWindow* parent)
     auto* sidebarSizer = new wxBoxSizer(wxVERTICAL);
     sidebarSizer->Add(title, 0, wxALL, 8);
     sidebarSizer->Add(m_palette, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+<<<<<<< HEAD
     sidebarSizer->Add(new wxStaticText(sidebar, wxID_ANY, L"元件名称"), 0,
                       wxLEFT | wxRIGHT | wxBOTTOM, 8);
     m_labelEdit = new wxTextCtrl(sidebar, wxID_ANY, wxEmptyString,
                                  wxDefaultPosition, wxDefaultSize,
                                  wxTE_PROCESS_ENTER);
     sidebarSizer->Add(m_labelEdit, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+=======
+>>>>>>> faaed4b (wan_first)
     sidebar->SetSizer(sidebarSizer);
 
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -100,7 +103,10 @@ MainFrame::MainFrame(wxWindow* parent)
     Bind(wxEVT_MENU, &MainFrame::OnToggleGrid, this, ID_GRID);
     Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_LISTBOX, &MainFrame::OnPalette, this, m_palette->GetId());
+<<<<<<< HEAD
     Bind(wxEVT_TEXT, &MainFrame::OnLabelChanged, this, m_labelEdit->GetId());
+=======
+>>>>>>> faaed4b (wan_first)
     Bind(wxEVT_TEXT, &MainFrame::OnCanvasChanged, this, kCanvasChangedId);
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
 
@@ -217,10 +223,13 @@ void MainFrame::OnPalette(wxCommandEvent& event) {
     m_canvas->StartPlace(static_cast<ComponentType>(index - 1));
 }
 
+<<<<<<< HEAD
 void MainFrame::OnLabelChanged(wxCommandEvent& event) {
     m_canvas->SetSelectedLabel(event.GetString());
 }
 
+=======
+>>>>>>> faaed4b (wan_first)
 void MainFrame::OnCanvasChanged(wxCommandEvent&) {
     SyncUi();
 }
@@ -260,6 +269,7 @@ void MainFrame::SyncUi() {
     SetTitle(title + L" - 电路原理图编辑器");
 
     SetStatusText(m_canvas->StatusText(), 0);
+<<<<<<< HEAD
     SetStatusText(wxString::Format("元件 %d   导线 %d",
                                    static_cast<int>(m_canvas->Model().Components().size()),
                                    static_cast<int>(m_canvas->Model().Wires().size())),
@@ -272,6 +282,12 @@ void MainFrame::SyncUi() {
     if (selected && !m_labelEdit->HasFocus()) {
         m_labelEdit->ChangeValue(selected->label);
     }
+=======
+    SetStatusText(wxString::Format(L"元件 %d   导线 %d",
+                                   static_cast<int>(m_canvas->Model().Components().size()),
+                                   static_cast<int>(m_canvas->Model().Wires().size())),
+                  1);
+>>>>>>> faaed4b (wan_first)
 }
 
 } // namespace eda

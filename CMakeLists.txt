@@ -88,3 +88,18 @@ set_target_properties(EDA PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+option(EDA_BUILD_TESTS "Build logic and canvas event regression tests" OFF)
+if(EDA_BUILD_TESTS)
+    enable_testing()
+    add_executable(EDA_tests tests/SchematicTests.cpp EDA.cpp Library.cpp Canvas.cpp)
+    target_include_directories(EDA_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    if(TARGET wxWidgets::wxWidgets)
+        target_link_libraries(EDA_tests PRIVATE wxWidgets::wxWidgets)
+    else()
+        target_link_libraries(EDA_tests PRIVATE ${wxWidgets_LIBRARIES})
+    endif()
+    add_dependencies(EDA_tests EDA)
+    add_test(NAME schematic_logic COMMAND EDA_tests)
+    add_test(NAME canvas_clicks COMMAND EDA_tests --canvas)
+endif()
+

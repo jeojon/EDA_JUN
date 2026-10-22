@@ -39,12 +39,6 @@ MainFrame::MainFrame(wxWindow* parent)
     auto* sidebarSizer = new wxBoxSizer(wxVERTICAL);
     sidebarSizer->Add(title, 0, wxALL, 8);
     sidebarSizer->Add(m_palette, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    sidebarSizer->Add(new wxStaticText(sidebar, wxID_ANY, L"元件名称"), 0,
-                      wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    m_labelEdit = new wxTextCtrl(sidebar, wxID_ANY, wxEmptyString,
-                                 wxDefaultPosition, wxDefaultSize,
-                                 wxTE_PROCESS_ENTER);
-    sidebarSizer->Add(m_labelEdit, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
     sidebar->SetSizer(sidebarSizer);
 
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -100,7 +94,6 @@ MainFrame::MainFrame(wxWindow* parent)
     Bind(wxEVT_MENU, &MainFrame::OnToggleGrid, this, ID_GRID);
     Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_LISTBOX, &MainFrame::OnPalette, this, m_palette->GetId());
-    Bind(wxEVT_TEXT, &MainFrame::OnLabelChanged, this, m_labelEdit->GetId());
     Bind(wxEVT_TEXT, &MainFrame::OnCanvasChanged, this, kCanvasChangedId);
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
 
@@ -215,10 +208,6 @@ void MainFrame::OnPalette(wxCommandEvent& event) {
     m_canvas->StartPlace(static_cast<ComponentType>(index - 1));
 }
 
-void MainFrame::OnLabelChanged(wxCommandEvent& event) {
-    m_canvas->SetSelectedLabel(event.GetString());
-}
-
 void MainFrame::OnCanvasChanged(wxCommandEvent&) {
     SyncUi();
 }
@@ -262,14 +251,6 @@ void MainFrame::SyncUi() {
                                    static_cast<int>(m_canvas->Model().Components().size()),
                                    static_cast<int>(m_canvas->Model().Wires().size())),
                   1);
-
-    const auto& selection = m_canvas->Model().Selection();
-    const Component* selected =
-        selection.size() == 1 ? m_canvas->Model().Find(selection.front()) : nullptr;
-    m_labelEdit->Enable(selected != nullptr);
-    if (selected && !m_labelEdit->HasFocus()) {
-        m_labelEdit->ChangeValue(selected->label);
-    }
 }
 
 } // namespace eda

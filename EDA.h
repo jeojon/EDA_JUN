@@ -54,6 +54,7 @@ struct Component {
     int height = 60;
     std::vector<Pin> pins;
     bool selected = false;
+    bool value = false;  // 输入元件的设定值，或逻辑门、输出元件的计算结果（0/1）。
 };
 
 struct Wire {
@@ -77,6 +78,10 @@ public:
     int AddWire(const Wire& w);
     bool RemoveComponent(int id);
     bool RemoveWire(int id);
+
+    bool ToggleValue(int componentId);
+    bool Evaluate(wxString* error = nullptr);
+    const wxString& LogicError() const { return m_logicError; }
 
     Component* Find(int id);
     const Component* Find(int id) const;
@@ -102,6 +107,7 @@ private:
     int m_selectedWire = 0;
     int m_nextComponentId = 1;
     int m_nextWireId = 1;
+    wxString m_logicError;
 };
 
 struct ComponentSpec {
@@ -143,7 +149,6 @@ public:
     void CancelMode();
     void RotateSelected();
     void DeleteSelected();
-    void SetSelectedLabel(const wxString& label);
     void SelectAll();
     void ZoomIn();
     void ZoomOut();
@@ -205,6 +210,8 @@ private:
     bool m_dragging = false;
     wxPoint m_dragLast;
     bool m_movedWhileDragging = false;
+    int m_clickComponent = 0;
+    wxPoint m_clickScreen;
     int m_wireStartComponent = 0;
     int m_wireStartPin = -1;
     bool m_middlePanning = false;
@@ -229,7 +236,6 @@ private:
     void OnToggleGrid(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
     void OnPalette(wxCommandEvent& event);
-    void OnLabelChanged(wxCommandEvent& event);
     void OnCanvasChanged(wxCommandEvent& event);
     void OnClose(wxCloseEvent& event);
 
@@ -238,7 +244,6 @@ private:
 
     Canvas* m_canvas = nullptr;
     wxListBox* m_palette = nullptr;
-    wxTextCtrl* m_labelEdit = nullptr;
 };
 
 } // namespace eda

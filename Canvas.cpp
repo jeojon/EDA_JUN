@@ -54,6 +54,7 @@ Canvas::Canvas(wxWindow* parent)
 }
 
 wxString Canvas::StatusText() const {
+    if (!m_model.LogicError().IsEmpty()) return m_model.LogicError();
     if (m_mode == Mode::Place) {
         const ComponentSpec* spec = ShapeLibrary::Get().Find(m_placeType);
         return wxString::Format(L"正在放置 %s，点击画布放置，Esc 取消",
@@ -66,10 +67,13 @@ wxString Canvas::StatusText() const {
     if (m_model.SelectedCount() > 0) {
         return wxString::Format(L"已选中 %d 个对象", m_model.SelectedCount());
     }
-    return L"选择左侧元件后点击画布放置；拖动引脚可连线";
+    return L"选择左侧元件后点击画布放置；依次点击引脚可连线";
 }
 
 void Canvas::StartPlace(ComponentType type) {
+    m_clickComponent = 0;
+    m_dragging = false;
+    if (HasCapture() && !m_middlePanning) ReleaseMouse();
     m_mode = Mode::Place;
     m_placeType = type;
     m_wireStartComponent = 0;
@@ -82,6 +86,8 @@ void Canvas::CancelMode() {
     m_wireStartComponent = 0;
     m_wireStartPin = -1;
     m_dragging = false;
+    m_clickComponent = 0;
+    if (HasCapture() && !m_middlePanning) ReleaseMouse();
     RefreshAndNotify();
 }
 
@@ -100,17 +106,6 @@ void Canvas::DeleteSelected() {
     if (m_model.SelectedCount() == 0) return;
     m_model.DeleteSelection();
     SetDirty();
-}
-
-void Canvas::SetSelectedLabel(const wxString& label) {
-    bool changed = false;
-    for (int id : m_model.Selection()) {
-        if (Component* c = m_model.Find(id)) {
-            c->label = label;
-            changed = true;
-        }
-    }
-    if (changed) SetDirty();
 }
 
 void Canvas::SelectAll() {
@@ -165,6 +160,7 @@ void Canvas::ToggleGrid() {
 }
 
 void Canvas::NewFile() {
+    CancelMode();
     m_model.Clear();
     m_filePath.clear();
     m_dirty = false;
@@ -211,7 +207,8 @@ bool Canvas::OpenFile(const wxString& path, wxString* error) {
         }
     }
 
-    m_model.Deserialize(text, error);
+    if (!m_model.Deserialize(text, error)) return false;
+    CancelMode();
     m_filePath = path;
     m_dirty = false;
     m_mode = Mode::Select;
@@ -389,6 +386,9 @@ void Canvas::OnPaint(wxPaintEvent&) {
 
 void Canvas::OnLeftDown(wxMouseEvent& event) {
     SetFocus();
+    if (m_middlePanning) return;
+    m_clickComponent = 0;
+    m_dragging = false;
     const wxPoint world = ScreenToWorld(event.GetPosition());
 
     if (m_mode == Mode::Place) {
@@ -412,7 +412,10 @@ void Canvas::OnLeftDown(wxMouseEvent& event) {
                 wire.startPin = m_wireStartPin;
                 wire.endComponent = hit.componentId;
                 wire.endPin = hit.pinIndex;
-                m_model.AddWire(wire);
+                if (m_model.AddWire(wire) == 0) {
+                    RefreshAndNotify();
+                    return;
+                }
                 m_wireStartComponent = 0;
                 m_wireStartPin = -1;
                 m_mode = Mode::Select;
@@ -439,6 +442,12 @@ void Canvas::OnLeftDown(wxMouseEvent& event) {
         m_dragging = true;
         m_dragLast = world;
         m_movedWhileDragging = false;
+        // 这里只记录点击候选；等左键释放后确认不是拖动，再调用后端切换值。
+        // Shift 用于多选，不参与输入/输出元件的 0/1 切换。
+        m_clickScreen = event.GetPosition();
+        if (!event.ShiftDown()) m_clickComponent = hit.componentId;
+        // 捕获鼠标，确保在画布外松开左键时也能结束拖动并清理点击候选。
+        if (!HasCapture()) CaptureMouse();
         RefreshAndNotify();
         return;
     }
@@ -453,9 +462,24 @@ void Canvas::OnLeftDown(wxMouseEvent& event) {
     RefreshAndNotify();
 }
 
-void Canvas::OnLeftUp(wxMouseEvent&) {
+void Canvas::OnLeftUp(wxMouseEvent& event) {
+    // 必须在同一元件本体上按下、释放；引脚点击仍交给原有连线逻辑。
+    const Hit hit = HitTest(ScreenToWorld(event.GetPosition()));
+    const int clicked = m_clickComponent;
+    const bool toggle = m_mode == Mode::Select && m_dragging &&
+        !m_middlePanning && !event.ShiftDown() && !m_movedWhileDragging &&
+        clicked != 0 && hit.componentId == clicked && hit.pinIndex < 0 &&
+        Distance2(event.GetPosition(), m_clickScreen) <= 9.0;
     m_dragging = false;
     m_movedWhileDragging = false;
+    m_clickComponent = 0;
+    if (HasCapture() && !m_middlePanning) ReleaseMouse();
+    if (toggle) {
+        // 画布只调用模型接口：INPUT 切换后由后端传播，OUTPUT 临时反转。
+        // 普通逻辑门不允许手动切换；只有实际修改成功才标记图纸未保存。
+        if (m_model.ToggleValue(clicked)) SetDirty();
+        else RefreshAndNotify();
+    }
 }
 
 void Canvas::OnMotion(wxMouseEvent& event) {
@@ -470,7 +494,11 @@ void Canvas::OnMotion(wxMouseEvent& event) {
         return;
     }
 
-    if (m_dragging && event.Dragging()) {
+    if (m_dragging && event.Dragging() && event.LeftIsDown()) {
+        // 使用屏幕像素区分点击与拖动；即使移动不足一个网格也不能误切换。
+        if (Distance2(event.GetPosition(), m_clickScreen) > 9.0) {
+            m_movedWhileDragging = true;
+        }
         wxPoint delta(world.x - m_dragLast.x, world.y - m_dragLast.y);
         if (m_snap) {
             delta.x = static_cast<int>(std::lround(static_cast<double>(delta.x) / kGridSize)) * kGridSize;
@@ -495,6 +523,7 @@ void Canvas::OnMotion(wxMouseEvent& event) {
 }
 
 void Canvas::OnMouseWheel(wxMouseEvent& event) {
+    m_clickComponent = 0;
     const wxPoint screen = event.GetPosition();
     const wxPoint before = ScreenToWorld(screen);
     const double factor = event.GetWheelRotation() > 0 ? 1.1 : 1.0 / 1.1;
@@ -505,6 +534,7 @@ void Canvas::OnMouseWheel(wxMouseEvent& event) {
 }
 
 void Canvas::OnKeyDown(wxKeyEvent& event) {
+    m_clickComponent = 0;
     switch (event.GetKeyCode()) {
         case WXK_ESCAPE:
             CancelMode();
@@ -539,9 +569,11 @@ void Canvas::OnKeyDown(wxKeyEvent& event) {
 }
 
 void Canvas::OnMiddleDown(wxMouseEvent& event) {
+    m_clickComponent = 0;
+    m_dragging = false;
     m_middlePanning = true;
     m_dragLast = ScreenToWorld(event.GetPosition());
-    CaptureMouse();
+    if (!HasCapture()) CaptureMouse();
 }
 
 void Canvas::OnMiddleUp(wxMouseEvent&) {
@@ -550,8 +582,11 @@ void Canvas::OnMiddleUp(wxMouseEvent&) {
 }
 
 void Canvas::OnCaptureLost(wxMouseCaptureLostEvent&) {
-    m_middlePanning = false;
+    // 切换窗口等情况可能使鼠标捕获丢失，清理候选以免下次松键误切换。
     m_dragging = false;
+    m_movedWhileDragging = false;
+    m_clickComponent = 0;
+    m_middlePanning = false;
 }
 
 void Canvas::SetDirty(bool dirty) {

@@ -11,6 +11,14 @@ namespace eda {
 constexpr int kGridSize = 20;
 constexpr int kCanvasChangedId = wxID_HIGHEST + 350;
 
+inline wxColour LogicHighColour() {
+    return wxColour(196, 61, 55);
+}
+
+inline wxColour LogicLowColour() {
+    return wxColour(74, 104, 136);
+}
+
 enum class ComponentType {
     AND,
     OR,

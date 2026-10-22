@@ -240,10 +240,12 @@ void CanvasClicks() {
     click(wxPoint(100, 100));
     CHECK(canvas->Model().Find(1)->value && canvas->Model().Find(2)->value);
     CHECK(canvas->IsDirty());
+    CHECK(canvas->StatusText().Contains(L"输入值：1"));
     click(wxPoint(100, 100));
     CHECK(!canvas->Model().Find(1)->value && !canvas->Model().Find(2)->value);
     click(wxPoint(300, 100));
     CHECK(canvas->Model().Find(2)->value && !canvas->Model().Find(1)->value);
+    CHECK(canvas->StatusText().Contains(L"输出值：1"));
 
     reset();
     click(wxPoint(100, 100), true);

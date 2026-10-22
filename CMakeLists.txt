@@ -13,11 +13,14 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Prefer WXWIN when it is set, otherwise use the sibling wxWidgets directory:
-# F:/VScode/Code/wxWidgets-3.2.2 on this machine.
+# Prefer WXWIN when it is set. Otherwise support the local MSVC installation
+# and the sibling MinGW installation used by other development machines.
 if(WIN32 AND NOT wxWidgets_ROOT_DIR)
     if(DEFINED ENV{WXWIN} AND EXISTS "$ENV{WXWIN}/include/wx/wx.h")
         set(wxWidgets_ROOT_DIR "$ENV{WXWIN}"
+            CACHE PATH "wxWidgets root directory")
+    elseif(EXISTS "D:/wxWeigets/wxWidgets-3.3.3/include/wx/wx.h")
+        set(wxWidgets_ROOT_DIR "D:/wxWeigets/wxWidgets-3.3.3"
             CACHE PATH "wxWidgets root directory")
     elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../wxWidgets-3.2.2/include/wx/wx.h")
         get_filename_component(_eda_wx_root
@@ -29,9 +32,17 @@ endif()
 
 if(WIN32 AND wxWidgets_ROOT_DIR AND NOT wxWidgets_LIB_DIR)
     if(MINGW)
-        set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/gcc_dll")
+        if(EXISTS "${wxWidgets_ROOT_DIR}/lib/gcc_dll")
+            set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/gcc_dll")
+        elseif(EXISTS "${wxWidgets_ROOT_DIR}/lib/gcc_lib")
+            set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/gcc_lib")
+        endif()
     elseif(MSVC)
-        set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/vc_x64_dll")
+        if(EXISTS "${wxWidgets_ROOT_DIR}/lib/vc_x64_dll")
+            set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/vc_x64_dll")
+        elseif(EXISTS "${wxWidgets_ROOT_DIR}/lib/vc_x64_lib")
+            set(_eda_wx_lib_dir "${wxWidgets_ROOT_DIR}/lib/vc_x64_lib")
+        endif()
     endif()
     if(DEFINED _eda_wx_lib_dir AND EXISTS "${_eda_wx_lib_dir}")
         set(wxWidgets_LIB_DIR "${_eda_wx_lib_dir}"
@@ -39,7 +50,7 @@ if(WIN32 AND wxWidgets_ROOT_DIR AND NOT wxWidgets_LIB_DIR)
     endif()
 endif()
 
-# The local MinGW DLL build contains both Release and Debug Unicode libraries.
+# Prefer the release Unicode configuration when the library build provides it.
 if(WIN32 AND wxWidgets_LIB_DIR AND NOT wxWidgets_CONFIGURATION)
     if(EXISTS "${wxWidgets_LIB_DIR}/mswu")
         set(wxWidgets_CONFIGURATION mswu
@@ -50,7 +61,14 @@ if(WIN32 AND wxWidgets_LIB_DIR AND NOT wxWidgets_CONFIGURATION)
     endif()
 endif()
 
+# Static wxWidgets builds do not place DLLs in the library directory.
 set(wxWidgets_USE_STATIC OFF)
+if(WIN32 AND wxWidgets_LIB_DIR)
+    file(GLOB _eda_wx_dlls "${wxWidgets_LIB_DIR}/*.dll")
+    if(NOT _eda_wx_dlls)
+        set(wxWidgets_USE_STATIC ON)
+    endif()
+endif()
 set(wxWidgets_USE_UNICODE ON)
 
 find_package(wxWidgets REQUIRED COMPONENTS core base)
@@ -73,8 +91,7 @@ else()
     target_link_libraries(EDA PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
-if(WIN32 AND NOT wxWidgets_USE_STATIC AND wxWidgets_LIB_DIR)
-    file(GLOB _eda_wx_dlls "${wxWidgets_LIB_DIR}/*.dll")
+if(WIN32 AND NOT wxWidgets_USE_STATIC)
     if(_eda_wx_dlls)
         add_custom_command(TARGET EDA POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

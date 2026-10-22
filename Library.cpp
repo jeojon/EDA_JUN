@@ -196,10 +196,13 @@ void ShapeLibrary::Draw(wxGraphicsContext* gc, const Component& c) const {
         gc->DrawEllipse(world.x - 3, world.y - 3, 6, 6);
     }
 
-    const double textWidth = 0;
-    (void)textWidth;
     gc->SetFont(wxFontInfo(9), *wxBLACK);
-    gc->DrawText(c.label, c.pos.x - 16, c.pos.y - c.height / 2 - 18);
+    wxDouble textWidth = 0;
+    wxDouble textHeight = 0;
+    gc->GetTextExtent(c.label, &textWidth, &textHeight);
+    gc->DrawText(c.label,
+                 c.pos.x - textWidth / 2,
+                 c.pos.y - c.height / 2 - textHeight - 4);
 }
 
 } // namespace eda

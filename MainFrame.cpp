@@ -39,6 +39,15 @@ MainFrame::MainFrame(wxWindow* parent)
     auto* sidebarSizer = new wxBoxSizer(wxVERTICAL);
     sidebarSizer->Add(title, 0, wxALL, 8);
     sidebarSizer->Add(m_palette, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+
+    auto* highLegend = new wxStaticText(sidebar, wxID_ANY, L"1  高电平");
+    highLegend->SetForegroundColour(LogicHighColour());
+    auto* lowLegend = new wxStaticText(sidebar, wxID_ANY, L"0  低电平");
+    lowLegend->SetForegroundColour(LogicLowColour());
+    sidebarSizer->Add(new wxStaticText(sidebar, wxID_ANY, L"信号"), 0,
+                      wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    sidebarSizer->Add(highLegend, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    sidebarSizer->Add(lowLegend, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
     sidebar->SetSizer(sidebarSizer);
 
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -77,7 +86,7 @@ MainFrame::MainFrame(wxWindow* parent)
     SetMenuBar(menuBar);
 
     CreateStatusBar(2);
-    const int statusWidths[] = { -1, 220 };
+    const int statusWidths[] = { -1, 390 };
     SetStatusWidths(2, statusWidths);
 
     Bind(wxEVT_MENU, &MainFrame::OnNew, this, wxID_NEW);
@@ -197,7 +206,8 @@ void MainFrame::OnToggleGrid(wxCommandEvent& event) {
 
 void MainFrame::OnAbout(wxCommandEvent&) {
     wxMessageBox(L"电路原理图编辑器\n"
-                 L"支持放置逻辑门、拖动元件、连接导线、保存和打开 .eda 文件。",
+                 L"支持放置逻辑门、连接导线并实时计算组合逻辑。\n"
+                 L"单击输入或输出元件可切换 0/1，红色表示高电平。",
                  L"关于", wxOK | wxICON_INFORMATION, this);
 }
 
@@ -249,9 +259,27 @@ void MainFrame::SyncUi() {
     SetTitle(title + L" - 电路原理图编辑器");
 
     SetStatusText(m_canvas->StatusText(), 0);
-    SetStatusText(wxString::Format(L"元件 %d   导线 %d",
-                                   static_cast<int>(m_canvas->Model().Components().size()),
-                                   static_cast<int>(m_canvas->Model().Wires().size())),
+
+    const Schematic& model = m_canvas->Model();
+    int inputs = 0;
+    int highInputs = 0;
+    int outputs = 0;
+    int highOutputs = 0;
+    for (const Component& c : model.Components()) {
+        if (c.type == ComponentType::INPUT) {
+            ++inputs;
+            if (c.value) ++highInputs;
+        } else if (c.type == ComponentType::OUTPUT) {
+            ++outputs;
+            if (c.value) ++highOutputs;
+        }
+    }
+
+    SetStatusText(wxString::Format(
+                      L"输入 %d/%d 为 1   输出 %d/%d 为 1   元件 %d   导线 %d",
+                      highInputs, inputs, highOutputs, outputs,
+                      static_cast<int>(model.Components().size()),
+                      static_cast<int>(model.Wires().size())),
                   1);
 }
 

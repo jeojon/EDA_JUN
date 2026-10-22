@@ -32,6 +32,62 @@ double DistanceToSegment2(const wxPoint& p, const wxPoint& a, const wxPoint& b) 
     return Distance2(p, projected);
 }
 
+bool IsOutputPin(const Component* c, int pinIndex) {
+    return c && pinIndex >= 0 &&
+           pinIndex < static_cast<int>(c->pins.size()) &&
+           c->pins[pinIndex].output;
+}
+
+bool WireSignalValue(const Schematic& model, const Wire& wire) {
+    const Component* start = model.Find(wire.startComponent);
+    const Component* end = model.Find(wire.endComponent);
+    if (IsOutputPin(start, wire.startPin)) return start->value;
+    if (IsOutputPin(end, wire.endPin)) return end->value;
+    return false;
+}
+
+wxPoint ValueBadgePosition(const Schematic& model, const Component& component) {
+    if (component.type == ComponentType::INPUT ||
+        component.type == ComponentType::OUTPUT) {
+        return component.pos;
+    }
+
+    for (int i = 0; i < static_cast<int>(component.pins.size()); ++i) {
+        if (!component.pins[i].output) continue;
+        const wxPoint pin = model.GetPinPos(component, i);
+        const double dx = pin.x - component.pos.x;
+        const double dy = pin.y - component.pos.y;
+        const double length = std::hypot(dx, dy);
+        if (length < 0.001) return component.pos;
+        const double inset = 11.0;
+        return wxPoint(
+            pin.x - static_cast<int>(std::lround(dx / length * inset)),
+            pin.y - static_cast<int>(std::lround(dy / length * inset)));
+    }
+    return component.pos;
+}
+
+void DrawValueBadge(wxGraphicsContext* gc, const Schematic& model,
+                    const Component& component) {
+    const bool terminal = component.type == ComponentType::INPUT ||
+                          component.type == ComponentType::OUTPUT;
+    const double radius = terminal ? 12.0 : 9.0;
+    const wxColour colour = component.value ? LogicHighColour() : LogicLowColour();
+    const wxPoint centre = ValueBadgePosition(model, component);
+
+    gc->SetPen(wxPen(colour.ChangeLightness(80), 1));
+    gc->SetBrush(wxBrush(colour));
+    gc->DrawEllipse(centre.x - radius, centre.y - radius,
+                    radius * 2.0, radius * 2.0);
+
+    const wxString text = component.value ? L"1" : L"0";
+    gc->SetFont(wxFontInfo(9).Bold(), *wxWHITE);
+    wxDouble textWidth = 0;
+    wxDouble textHeight = 0;
+    gc->GetTextExtent(text, &textWidth, &textHeight);
+    gc->DrawText(text, centre.x - textWidth / 2.0, centre.y - textHeight / 2.0);
+}
+
 } // namespace
 
 Canvas::Canvas(wxWindow* parent)
@@ -63,10 +119,25 @@ wxString Canvas::StatusText() const {
         return m_wireStartComponent ? L"请点击第二个引脚完成连线，Esc 取消"
                                     : L"请点击第一个引脚开始连线";
     }
+    const auto& selection = m_model.Selection();
+    if (selection.size() == 1) {
+        const Component* c = m_model.Find(selection.front());
+        if (c) {
+            const wchar_t* role = c->type == ComponentType::INPUT ? L"输入值" :
+                                  c->type == ComponentType::OUTPUT ? L"输出值" :
+                                  L"运算结果";
+            const wchar_t* hint =
+                (c->type == ComponentType::INPUT || c->type == ComponentType::OUTPUT)
+                    ? L"，单击切换 0/1"
+                    : L"";
+            return wxString::Format(L"%s · %s：%d%s",
+                                    c->label, role, c->value ? 1 : 0, hint);
+        }
+    }
     if (m_model.SelectedCount() > 0) {
         return wxString::Format(L"已选中 %d 个对象", m_model.SelectedCount());
     }
-    return L"选择左侧元件后点击画布放置；依次点击引脚可连线";
+    return L"选择左侧元件后点击画布放置；依次点击引脚可连线；单击输入/输出切换 0/1";
 }
 
 void Canvas::StartPlace(ComponentType type) {
@@ -299,15 +370,18 @@ void Canvas::DrawWires(wxGraphicsContext* gc) const {
         const wxPoint b = m_model.GetPinPos(w.endComponent, w.endPin);
         const int midX = (a.x + b.x) / 2;
         const bool selected = m_model.IsSelected(w.id);
+        const bool high = WireSignalValue(m_model, w);
+        const wxColour colour = selected
+                                    ? wxColour(220, 100, 20)
+                                    : high ? LogicHighColour() : LogicLowColour();
+        const int width = selected || high ? 3 : 2;
 
-        gc->SetPen(wxPen(selected ? wxColour(220, 100, 20) : wxColour(30, 90, 180),
-                         selected ? 3 : 2));
+        gc->SetPen(wxPen(colour, width));
         gc->StrokeLine(a.x, a.y, midX, a.y);
         gc->StrokeLine(midX, a.y, midX, b.y);
         gc->StrokeLine(midX, b.y, b.x, b.y);
 
-        gc->SetBrush(wxBrush(selected ? wxColour(220, 100, 20)
-                                      : wxColour(30, 90, 180)));
+        gc->SetBrush(wxBrush(colour));
         gc->DrawEllipse(a.x - 3, a.y - 3, 6, 6);
         gc->DrawEllipse(b.x - 3, b.y - 3, 6, 6);
     }
@@ -317,6 +391,7 @@ void Canvas::DrawComponents(wxGraphicsContext* gc) const {
     ShapeLibrary& library = ShapeLibrary::Get();
     for (const auto& c : m_model.Components()) {
         library.Draw(gc, c);
+        DrawValueBadge(gc, m_model, c);
         if (c.selected) {
             gc->SetPen(wxPen(wxColour(255, 150, 0), 1, wxPENSTYLE_DOT));
             const wxRect box = library.Bounds(c);

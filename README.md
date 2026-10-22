@@ -1,11 +1,11 @@
 # 电路原理图编辑器（EDA）— 代码结构与逻辑导读
 
-一个用 **wxWidgets + C++17** 写的逻辑电路原理图编辑器：左侧"元件库"选元件，右侧画布放元件、连线、拖动、缩放，图纸可保存/打开。输入和输出元件支持点击切换 0/1，后端支持六种逻辑门的组合逻辑计算。
+一个用 **wxWidgets + C++17** 写的逻辑电路原理图编辑器：左侧"元件库"选元件，右侧画布放元件、连线、拖动、缩放，图纸可保存/打开。输入和输出元件支持点击切换 0/1，后端支持六种逻辑门的组合逻辑计算。画布会显示每个元件的运算结果，并用红色/蓝灰色区分为高/低电平导线。
 
 本文档说明**每块逻辑写在哪个文件、哪一行**，以及它们之间怎么串起来。
 行号是当前版本的参考值，改动代码后可能偏移，定位请以**函数名**为准。
 
-本文已按此次改动更新原有章节；前端读取计算结果见 **5.7 节**，Git 上传步骤见 **10 节**。当前画布绘制仍显示元件符号和标签，0/1 值保存在模型中，尚未绘制到元件上。
+本文已按此次改动更新原有章节；前端读取计算结果见 **5.7 节**，Git 上传步骤见 **10 节**。画布会显示元件 0/1 值：输入/输出值位于元件中心，逻辑门结果靠近输出脚。
 
 ---
 
@@ -35,18 +35,28 @@ Main.cpp  →  MainFrame（窗口/菜单/侧边栏）  →  Canvas（画布交�
 
 ## 2. 构建与运行
 
+MinGW 动态库配置：
+
 ```powershell
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel 4
 .\build\EDA.exe
 ```
 
-以上命令与本机现有 `build` 的 MinGW 生成器一致，需将 CMake 和 MinGW 的 `bin` 目录加入 PATH，或使用可执行文件的完整路径。本机 CMake 位于 `F:/Visual Studio/Visual Studio2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin`，MinGW 位于 `F:/VScode/Environment variable/mingw64/bin`。已有构建目录不要切换生成器；需要 MSVC 时请使用另一个构建目录。
+MSVC 静态库配置：
+
+```powershell
+cmake -S . -B build-msvc -G "Visual Studio 18 2026" -A x64
+cmake --build build-msvc --config Debug
+.\build-msvc\Debug\EDA.exe
+```
+
+请按本机安装的 Visual Studio 调整生成器版本。MinGW 和 MSVC 需要各自的构建目录，已有构建目录不要切换生成器。
 
 构建要点（见 `CMakeLists.txt`）：
 
-- 需要 wxWidgets（本机为相邻目录 `F:/VScode/Code/wxWidgets-3.2.2`，也可用环境变量 `WXWIN` 或 `wxWidgets_ROOT_DIR` 指定）。
-- 当前配置使用 Unicode 动态库，编译器、架构及 Debug/Release 库需匹配。构建后会将 wxWidgets DLL 复制到程序目录。
+- 需要 wxWidgets。脚本依次查找环境变量 `WXWIN`、本机 MSVC 安装 `D:/wxWeigets/wxWidgets-3.3.3`、相邻的 MinGW 安装 `../wxWidgets-3.2.2`，也可直接指定 `wxWidgets_ROOT_DIR`。
+- 脚本按库目录中是否存在 DLL 自动选择动态或静态链接。动态库配置会把 wxWidgets DLL 复制到程序目录；编译器、架构及 Debug/Release 库需匹配。
 - MSVC 编译选项含 `/utf-8`，MinGW 使用 UTF-8 源码；中文字符串及编辑器编码约定见第 7 节。
 
 开启并运行回归测试（本地 `CMakeLists.txt` 需包含 `EDA_BUILD_TESTS` 选项）：
@@ -57,7 +67,7 @@ cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure --timeout 30
 ```
 
-`EDA_BUILD_TESTS` 默认关闭。开启后生成 `EDA_tests.exe`，CTest 注册 `schematic_logic` 和 `canvas_clicks` 两组测试；此次验证通过 253 项后端检查和 18 项画布事件检查。画布测试使用未显示的窗口直接投递事件。
+`EDA_BUILD_TESTS` 默认关闭。开启后生成 `EDA_tests.exe`，CTest 注册 `schematic_logic` 和 `canvas_clicks` 两组测试；此次验证通过 253 项后端检查和 20 项画布事件检查。画布测试使用未显示的窗口直接投递事件。
 
 ---
 
@@ -74,7 +84,7 @@ ctest --test-dir build --output-on-failure --timeout 30
 | 39-42 | `sidebarSizer` | 侧边栏纵向布局（标题 / 元件库列表） |
 | 44-47 | `sizer` | 主布局：左侧边栏（固定宽）+ 右画布（拉伸填充） |
 | 49-77 | 菜单栏 | 文件 / 编辑 / 视图 / 帮助 四个菜单 |
-| 79-81 | `CreateStatusBar(2)` | 状态栏分两栏：左为提示或逻辑错误，右为"元件 N 导线 M" |
+| 79-81 | `CreateStatusBar(2)` | 状态栏分两栏：左为提示或逻辑错误，右为输入/输出高电平统计及元件、导线数量 |
 | 83-98 | `Bind(...)` | **所有事件绑定的集中位置**（见下表） |
 | 100-102 | `SetSize / Centre / SyncUi` | 窗口尺寸、居中、首次刷新界面 |
 
@@ -182,8 +192,8 @@ ID_ZOOM_IN  ID_ZOOM_OUT  ID_ZOOM_RESET  ID_FIT  ID_GRID
 | `HitBody` | 233 | 本体命中判定（方形包围盒） |
 | `HitTest` | 240 | **命中测试总入口**，优先级：引脚（半径 10px）→ 元件本体（从后往前）→ 导线（距离 ≤6px） |
 | `DrawGrid` | 274 | 画网格；缩得太小时自动按 5 倍步长抽稀 |
-| `DrawWires` | 296 | 画"Z 字形"折线导线，选中时变橙色加粗；当前不按信号值着色 |
-| `DrawComponents` | 316 | 画所有元件和选中框；循环中的 `c.value` 可供后续前端显示数值 |
+| `DrawWires` | 296 | 画"Z 字形"折线导线；高电平为红色，低电平为蓝灰色，选中时变橙色加粗 |
+| `DrawComponents` | 316 | 画所有元件、选中框和 0/1 结果徽标；输入/输出值居中，逻辑门结果靠近输出脚 |
 | `DrawPreview` | 328 | 放置模式的半透明预览；连线模式的橡皮筋虚线 |
 | `OnPaint` | 349 | 双缓冲绘制；整体变换 `Translate(-origin) + Scale(zoom)`；不执行逻辑求值 |
 
@@ -304,7 +314,7 @@ Canvas::RefreshAndNotify()  (Canvas.cpp:578)
 MainFrame::OnCanvasChanged (MainFrame.cpp:213) → MainFrame::SyncUi() (MainFrame.cpp:244)
         ├─ 标题：文件名/未命名 + 脏标记 "*"
         ├─ 状态栏左栏：Canvas::StatusText()，优先显示 LogicError()
-        └─ 状态栏右栏：元件数 / 导线数
+        └─ 状态栏右栏：高电平输入/输出数量、元件数、导线数
 ```
 
 > `kCanvasChangedId`（`EDA.h:12`）是画布与主窗口之间的私有事件 ID，避免和菜单 ID 混用。
@@ -360,16 +370,7 @@ wxString ReadLogicValue(eda::Canvas& canvas, int componentId) {
 }
 ```
 
-在 `MainFrame` 内可将 `*m_canvas` 传给该函数；在画布绘制循环中已经有 `const Component& c`，直接使用 `c.value` 即可。例如，后续需要在 INPUT/OUTPUT 上显示数值，可在 `Canvas::DrawComponents` 内按现有坐标体系增加以下绘制语句：
-
-```cpp
-if (c.type == eda::ComponentType::INPUT || c.type == eda::ComponentType::OUTPUT) {
-    gc->SetFont(wxFontInfo(10), *wxBLACK);
-    gc->DrawText(c.value ? L"1" : L"0", c.pos.x - 4, c.pos.y - 8);
-}
-```
-
-以上数值绘制仅为接入示例，当前代码尚未加入该显示。前端也可将读取到的数值用于属性栏或指示灯；不应将结果写入 `label`，否则会改变元件名称和保存内容。
+`Canvas::DrawComponents` 现在直接读取 `Component::value` 绘制 0/1 徽标，`Canvas::DrawWires` 根据输出脚所属元件的 `value` 选择导线颜色。元件值不会写回 `label`，因此不会改变名称或保存格式。选中单个元件时，状态栏左侧显示其输入值、输出值或运算结果；右侧显示高电平输入和输出数量。
 
 | 前端需求 | 后端接口 / 数据 | 约定 |
 | --- | --- | --- |
@@ -379,7 +380,7 @@ if (c.type == eda::ComponentType::INPUT || c.type == eda::ComponentType::OUTPUT)
 | 创建连线 | `AddWire(wire)` | 返回非零 ID 才成功；`0` 表示拒绝，读取 `LogicError()` |
 | 主动重算 | `Evaluate(&error)` | 成功才使用本次计算结果；失败时原值仍保留 |
 | 展示错误 | `LogicError()` / `error` | 当前 `StatusText()` 已接入最近一次求值或拒绝连线的原因 |
-| 显示导线信号 | 根据两端 `Pin::output` 找到信号源，再读源元件 `value` | `Wire` 没有独立 `value` 字段，不可固定读取 `startComponent` |
+| 显示导线信号 | 根据两端 `Pin::output` 找到信号源，再读源元件 `value` | 当前已在 `DrawWires` 中实现；`Wire` 没有独立 `value` 字段 |
 
 `Components()`、`Wires()` 和 `Find()` 也提供可写访问，直接改 `value` 或直接增删集合会绕过自动重算、连线校验和 UI 通知。新增前端交互应优先封装在 Canvas 成员函数中，调用现有模型接口后走 `SetDirty/RefreshAndNotify`；若确需直接编辑模型，应显式执行 `Evaluate()` 并处理结果。跨越元件增删时只保存 ID，使用时重新 `Find()`，避免缓存失效的指针。
 
@@ -419,7 +420,7 @@ if (c.type == eda::ComponentType::INPUT || c.type == eda::ComponentType::OUTPUT)
 | `OpenFile` | 174 | **修改**：读取并解码文件，检查 `Deserialize` 返回值；仅成功后取消交互、更新路径并清除脏标记 |
 | `SaveFile` | 202 | 写出模型的 UTF-8 序列化内容，成功后更新路径、清除脏标记 |
 | `ScreenToWorld` / `Snap` / `HitBody` / `HitTest` | 221 / 227 / 233 / 240 | 坐标换算与命中测试，详见 4.4 节 |
-| `DrawGrid` / `DrawWires` / `DrawComponents` / `DrawPreview` / `OnPaint` | 274 / 296 / 316 / 328 / 349 | 绘制，当前未显示 `value` 数字，详见 5.7 节接入示例 |
+| `DrawGrid` / `DrawWires` / `DrawComponents` / `DrawPreview` / `OnPaint` | 274 / 296 / 316 / 328 / 349 | 绘制网格、按电平着色的导线、元件 0/1 徽标、预览和选中框 |
 | `OnLeftDown` | 368 | **修改**：记录点击候选并捕获鼠标；连线返回 `0` 时保留连线模式、展示错误，不标记脏 |
 | `OnLeftUp` | 446 | **修改**：区分点击/拖动，确认同一元件本体、非 Shift 后调用 `ToggleValue`；释放捕获并清理状态 |
 | `OnMotion` | 466 | **修改**：保留拖动和平移；用屏幕距离记录拖动，防止不足一个网格时误切换值 |
@@ -497,28 +498,25 @@ MSVC 会把这种窄字面量按 UTF-8 字节存进程序，而 **wxWidgets 在 
 
 ## 8. 已知问题与可改进点
 
-1. **数值尚未在画布显示**
-   当前模型已有 `value`，点击也会切换并计算，但元件绘制只显示符号和标签；数值、指示灯及导线着色可按 5.7 节读取结果后接入。
-
-2. **选中状态存在两处**
+1. **选中状态存在两处**
    `Component::selected` 与 `Schematic::m_selectedComponents` 需要同步维护；`SelectWire` 与元件选中互斥。新增选中相关功能时注意同时更新两者。
 
-3. **`Schematic::Find` 返回裸指针**
+2. **`Schematic::Find` 返回裸指针**
    一旦在持有指针期间增删元件（`std::vector` 可能重新分配），指针就会失效。当前代码都在同一语句内用完即弃，新增逻辑需保持这个习惯。
 
-4. **连线判定较宽松**
+3. **连线判定较宽松**
    `HitTest` 中引脚命中半径 10px（`Distance2(...) <= 100.0`），元件本体是方形包围盒而非真实图形；密集摆放时可能误选。
 
-5. **标签会写进文件行尾**
+4. **标签会写进文件行尾**
    `Serialize` 用空格分隔、标签在行尾；通过模型直接设置标签时，不应包含换行。当前版本没有改名输入框。
 
-6. **打开文件前尚无未保存确认**
+5. **打开文件前尚无未保存确认**
    当前 `OnNew` 和 `OnClose` 有未保存提示，`OnOpen` 会直接加载所选文件；打开前应先保存当前图纸。直接覆盖现有保存路径也没有二次确认。
 
-7. **仅支持组合逻辑**
+6. **仅支持组合逻辑**
    环路会被拒绝，尚不支持时钟、锁存器或时序仿真。未连接输入按 `0` 处理；OUTPUT 手动反转是临时状态，下次求值会覆盖。
 
-8. **加载警告与失败需区分**
+7. **加载警告与失败需区分**
    `Deserialize` 成功时也可能通过 `error` 返回跳过行提示；当前主窗口只展示失败弹窗。外部调用者应检查返回值并自行决定如何展示成功时的警告。
 
 ---
@@ -539,3 +537,26 @@ MSVC 会把这种窄字面量按 UTF-8 字节存进程序，而 **wxWidgets 在 
 | `Component::value` | 元件的 0/1 设定值或运算结果 |
 | `ToggleValue` / `Evaluate` / `LogicError` | 切换值 / 重新计算 / 获取逻辑错误 |
 
+---
+
+## 10. Git 拉取与构建产物
+
+### 10.1 日常拉取
+
+本地 `main` 跟踪 `origin/main`，远端地址为 `git@github.com:jeojon/EDA_JUN.git`。拉取前先查看状态，确认没有未提交的源码改动：
+
+```powershell
+git status
+git pull
+```
+
+如果出现合并冲突，先解决冲突并暂存相关文件，再执行 `git commit` 完成合并；需要放弃本次合并时使用 `git merge --abort`。
+
+### 10.2 不要提交 `build/`
+
+`build/` 是 CMake 生成的编译目录，已经写入 `.gitignore`，并从 Git 索引中移除；本机目录和其中的可执行文件仍然保留。以后不要用 `git add -f build/` 强行提交编译产物。若旧提交中仍跟踪该目录，可用下面的命令停止跟踪而不删除本地文件：
+
+```powershell
+git rm -r --cached build
+git commit -m "停止跟踪构建产物"
+```

@@ -548,3 +548,27 @@ MSVC 会把这种窄字面量按 UTF-8 字节存进程序，而 **wxWidgets 在 
 | `kCanvasChangedId` | 画布→主窗口的状态通知 ID |
 | `Component::value` | 元件的 0/1 设定值或运算结果 |
 | `ToggleValue` / `Evaluate` / `LogicError` | 切换值 / 重新计算 / 获取逻辑错误 |
+
+---
+
+## 10. Git 拉取与构建产物
+
+### 10.1 日常拉取
+
+本地 `main` 跟踪 `origin/main`，远端地址为 `git@github.com:jeojon/EDA_JUN.git`。拉取前先查看状态，确认没有未提交的源码改动：
+
+```powershell
+git status
+git pull
+```
+
+如果出现合并冲突，先解决冲突并暂存相关文件，再执行 `git commit` 完成合并；需要放弃本次合并时使用 `git merge --abort`。
+
+### 10.2 不要提交 `build/`
+
+`build/` 是 CMake 生成的编译目录，已经写入 `.gitignore`，并从 Git 索引中移除；本机目录和其中的可执行文件仍然保留。以后不要用 `git add -f build/` 强行提交编译产物。若旧提交中仍跟踪该目录，可用下面的命令停止跟踪而不删除本地文件：
+
+```powershell
+git rm -r --cached build
+git commit -m "停止跟踪构建产物"
+```

@@ -1,3 +1,0 @@
-E:/hp/Documents/文档(main)/OneDrive/桌面/wx学习/第一版/build/CMakeFiles/EDA.dir
-E:/hp/Documents/文档(main)/OneDrive/桌面/wx学习/第一版/build/CMakeFiles/ALL_BUILD.dir
-E:/hp/Documents/文档(main)/OneDrive/桌面/wx学习/第一版/build/CMakeFiles/ZERO_CHECK.dir
